@@ -1,40 +1,54 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+
 #include <bluetooth/bluetooth.h>
+#include <bluetooth/l2cap.h>
 #include <bluetooth/rfcomm.h>
 
+#include <cstdint>
+#include <iostream>
 #include <sstream>
 
 int main(int argc, char **argv)
 {
-    struct sockaddr_rc addr = { 0 };
+    struct sockaddr_l2 addr = { 0 };
     int s, status;
     char dest[18] = "C8:3F:26:11:D7:D3";
 
     // allocate a socket
-    s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+    s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
 
     // set the connection parameters (who to connect to)
-    addr.rc_family = AF_BLUETOOTH;
-    addr.rc_channel = (uint8_t) 1;
-    str2ba( dest, &addr.rc_bdaddr );
+    addr.l2_family = AF_BLUETOOTH;
+    //addr.l2_psm = htobs(0x1001);
+    addr.l2_psm = htobs(17);
+    //addr.l2_psm = htobs();
+    str2ba( dest, &addr.l2_bdaddr );
 
     // connect to server
+    std::cout << "Before connect()" << std::endl;
     status = connect(s, (struct sockaddr *)&addr, sizeof(addr));
-    if( status < 0 ) {
-      perror("uh oh");
+    std::cout << "After connect()" << std::endl;
+    if (status < 0)
+    {
+      perror("connect");
       return EXIT_FAILURE;
     }
 
+    std::cout << "Before read loop" << std::endl;
     size_t bt_packets_received = 0;
     while (true)
     {
-      char buffer[1024];
-      int result = read(s, buffer, sizeof(buffer));
+      uint8_t buffer[64];
+    std::cout << "Before read iteration: " << bt_packets_received << std::endl;
+      int result = recv(s, buffer, sizeof(buffer), 0);
+    std::cout << "After read iteration: " << bt_packets_received << std::endl;
       if (result < 0)
       {
         perror("uh oh");
+        return EXIT_FAILURE;
       }
       else
       {
@@ -52,5 +66,5 @@ int main(int argc, char **argv)
     }
 
     close(s);
-    return 0;
+    return EXIT_SUCCESS;
 }
