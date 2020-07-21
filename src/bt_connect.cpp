@@ -1,4 +1,3 @@
-
 /*
  * URI: https://www.linumiz.com/bluetooth-adapter-scan-for-new-devices-using-startdiscovery/
  *
@@ -12,6 +11,8 @@
  */
 #include <glib.h>
 #include <gio/gio.h>
+
+#include <iostream>
 
 GDBusConnection *con;
 static void bluez_property_value(const gchar *key, GVariant *value)
@@ -40,7 +41,6 @@ static void bluez_property_value(const gchar *key, GVariant *value)
 			g_variant_iter_init(&i, value);
 			while(g_variant_iter_next(&i, "s", &uuid))
 				g_print("\t\t%s\n", uuid);
-
 			break;
 		default:
 			g_print("Other\n");
@@ -231,6 +231,8 @@ int main(void)
 	guint prop_changed;
 	guint iface_added;
 	guint iface_removed;
+	GVariant *result;
+	GError *error = NULL;
 
 	con = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
 	if(con == NULL) {
@@ -239,39 +241,6 @@ int main(void)
 	}
 
 	loop = g_main_loop_new(NULL, FALSE);
-
-	prop_changed = g_dbus_connection_signal_subscribe(con,
-						"org.bluez",
-						"org.freedesktop.DBus.Properties",
-						"PropertiesChanged",
-						NULL,
-						"org.bluez.Adapter1",
-						G_DBUS_SIGNAL_FLAGS_NONE,
-						bluez_signal_adapter_changed,
-						NULL,
-						NULL);
-
-	iface_added = g_dbus_connection_signal_subscribe(con,
-							"org.bluez",
-							"org.freedesktop.DBus.ObjectManager",
-							"InterfacesAdded",
-							NULL,
-							NULL,
-							G_DBUS_SIGNAL_FLAGS_NONE,
-							bluez_device_appeared,
-							loop,
-							NULL);
-
-	iface_removed = g_dbus_connection_signal_subscribe(con,
-							"org.bluez",
-							"org.freedesktop.DBus.ObjectManager",
-							"InterfacesRemoved",
-							NULL,
-							NULL,
-							G_DBUS_SIGNAL_FLAGS_NONE,
-							bluez_device_disappeared,
-							loop,
-							NULL);
 
 	rc = bluez_adapter_set_property("Powered", g_variant_new("b", TRUE));
 	if(rc) {
@@ -285,6 +254,32 @@ int main(void)
 		goto fail;
 	}
 
+  std::cout << "Before g_dbus_connection_call_sync()..." << std::endl;
+
+	g_dbus_connection_call_sync(con,
+				"org.bluez",
+        "/org/bluez/hci0/dev_C8_3F_26_11_D7_D3",
+				"org.bluez.Device1",
+				"Connect",
+				NULL,
+        NULL,
+				G_DBUS_CALL_FLAGS_NONE,
+				-1,
+				NULL,
+        &error);
+
+  std::cout << "After g_dbus_connection_call_sync()..." << std::endl;
+
+  if (error)
+  {
+    std::cout << "Error! " << error->message << std::endl;
+  }
+  else
+  {
+    g_variant_unref(result);
+    std::cout << "Success!" << std::endl;
+  }
+
 	g_main_loop_run(loop);
 	rc = bluez_adapter_call_method("StopDiscovery");
 	if(rc)
@@ -294,10 +289,8 @@ int main(void)
 	rc = bluez_adapter_set_property("Powered", g_variant_new("b", FALSE));
 	if(rc)
 		g_print("Not able to disable the adapter\n");
+
 fail:
-	g_dbus_connection_signal_unsubscribe(con, prop_changed);
-	g_dbus_connection_signal_unsubscribe(con, iface_added);
-	g_dbus_connection_signal_unsubscribe(con, iface_removed);
 	g_object_unref(con);
 	return 0;
 }
