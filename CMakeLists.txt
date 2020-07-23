@@ -57,6 +57,9 @@ add_executable(bt_sdp_query
   src/gdbus/polkit.c
   src/gdbus/watch.c)
 
+add_executable(bt_xbox_controller_read
+  src/bt_xbox_controller_read.cpp)
+
 file(GLOB BLUEZ_PREBUILT_LIBRARIES "lib/*.so*")
 message("BLUEZ_LIBRARIES = ${BLUEZ_PREBUILT_LIBRARIES}")
 
@@ -85,6 +88,10 @@ target_link_libraries(bt_hci_scan ${GLIB_PREBUILT_LIBRARIES})
 target_link_libraries(bt_sdp_query ${BLUEZ_PREBUILT_LIBRARIES})
 target_link_libraries(bt_sdp_query ${DBUS_PREBUILT_LIBRARIES})
 target_link_libraries(bt_sdp_query ${GLIB_PREBUILT_LIBRARIES})
+
+target_link_libraries(bt_xbox_controller_read ${BLUEZ_PREBUILT_LIBRARIES})
+target_link_libraries(bt_xbox_controller_read ${DBUS_PREBUILT_LIBRARIES})
+target_link_libraries(bt_xbox_controller_read ${GLIB_PREBUILT_LIBRARIES})
 
 target_link_libraries(bt_scan ${BLUEZ_PREBUILT_LIBRARIES})
 target_link_libraries(bt_read ${BLUEZ_PREBUILT_LIBRARIES})
